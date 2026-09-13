@@ -288,11 +288,13 @@ auth.onAuthStateChanged((user) => {
   if (user) {
     lockScreen.style.display = 'none';
     appContent.style.display = 'block';
+    attachMessagesListener();
   } else {
     lockScreen.style.display = 'block';
     appContent.style.display = 'none';
     pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
     pinBoxes[0].focus();
+    detachMessagesListener();
   }
 });
 
@@ -448,16 +450,22 @@ function render(list) {
 let openReplyId = null;
 let latestList = [];
 
-messagesRef.on('value', (snapshot) => {
-  const val = snapshot.val() || {};
-  latestList = Object.keys(val)
-    .map(id => ({ id, ...val[id] }))
-    .sort((a, b) => a.ts - b.ts);
-  statusEl.textContent = '';
-  render(latestList);
-}, (err) => {
-  statusEl.textContent = 'Could not connect. Check your database rules.';
-});
+function attachMessagesListener() {
+  messagesRef.on('value', (snapshot) => {
+    const val = snapshot.val() || {};
+    latestList = Object.keys(val)
+      .map(id => ({ id, ...val[id] }))
+      .sort((a, b) => a.ts - b.ts);
+    statusEl.textContent = '';
+    render(latestList);
+  }, (err) => {
+    statusEl.textContent = 'Could not connect. Check your database rules.';
+  });
+}
+
+function detachMessagesListener() {
+  messagesRef.off();
+}
 
 async function sendMessage() {
   const text = msgInput.value.trim();
