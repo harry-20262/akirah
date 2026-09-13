@@ -1,0 +1,409 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shared Messages</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    max-width: 600px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #f5f5f4;
+    color: #1a1a1a;
+  }
+  h1 {
+    font-size: 20px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+  p.sub {
+    color: #6b6b68;
+    font-size: 13px;
+    margin-top: 0;
+    margin-bottom: 20px;
+  }
+  input, textarea, button {
+    font-family: inherit;
+    font-size: 14px;
+  }
+  #compose {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  #compose-row {
+    display: flex;
+    gap: 8px;
+  }
+  #image-btn {
+    background: white;
+    border: 1px solid #d4d4d1;
+    color: #6b6b68;
+    padding: 8px 10px;
+    flex-shrink: 0;
+  }
+  #image-btn:hover { background: #f0efec; }
+  #image-preview-row {
+    display: none;
+    align-items: center;
+    gap: 8px;
+  }
+  #image-preview-row img {
+    max-height: 60px;
+    border-radius: 6px;
+    border: 1px solid #e7e5e4;
+  }
+  #remove-image-btn {
+    background: none;
+    border: none;
+    color: #9c9c98;
+    font-size: 12px;
+    padding: 4px 8px;
+  }
+  #remove-image-btn:hover { color: #6b6b68; background: none; }
+  .msg-image {
+    max-width: 100%;
+    border-radius: 8px;
+    margin-bottom: 6px;
+    display: block;
+  }
+  textarea {
+    flex: 1;
+    padding: 8px 10px;
+    border: 1px solid #d4d4d1;
+    border-radius: 8px;
+    resize: none;
+    background: white;
+    min-height: 40px;
+  }
+  button {
+    padding: 8px 16px;
+    border: none;
+    border-radius: 8px;
+    background: #d97757;
+    color: white;
+    font-weight: 500;
+    cursor: pointer;
+  }
+  button:hover { background: #c76a4c; }
+  button:disabled { background: #d4d4d1; cursor: default; }
+  #messages {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  .msg {
+    background: white;
+    border: 1px solid #e7e5e4;
+    border-radius: 10px;
+    padding: 10px 14px;
+  }
+  .msg-time {
+    font-size: 11px;
+    color: #9c9c98;
+    margin-bottom: 4px;
+  }
+  .msg-text {
+    font-size: 14px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .reply-toggle {
+    background: none;
+    border: none;
+    color: #9c9c98;
+    font-size: 12px;
+    padding: 6px 0 0;
+    cursor: pointer;
+  }
+  .reply-toggle:hover { color: #6b6b68; background: none; }
+  .replies {
+    margin-top: 8px;
+    padding-left: 12px;
+    border-left: 2px solid #e7e5e4;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .reply-text {
+    font-size: 13px;
+    white-space: pre-wrap;
+    word-break: break-word;
+  }
+  .reply-compose {
+    display: flex;
+    gap: 6px;
+    margin-top: 8px;
+  }
+  .reply-compose textarea {
+    min-height: 32px;
+    font-size: 13px;
+  }
+  .reply-compose button {
+    padding: 6px 12px;
+    font-size: 13px;
+  }
+  #empty {
+    text-align: center;
+    color: #9c9c98;
+    padding: 40px 0;
+    font-size: 14px;
+  }
+  #status {
+    font-size: 12px;
+    color: #9c9c98;
+    text-align: center;
+    margin-top: 12px;
+  }
+</style>
+</head>
+<body>
+
+<h1>Shared messages</h1>
+<p class="sub">Anyone who opens this page can post and see messages here.</p>
+
+<div id="compose">
+  <div id="compose-row">
+    <textarea id="msg-input" placeholder="Write a message..." maxlength="1000"></textarea>
+    <button id="image-btn" title="Attach image" aria-label="Attach image">Image</button>
+    <input type="file" id="image-input" accept="image/*" style="display:none;">
+    <button id="send-btn">Send</button>
+  </div>
+  <div id="image-preview-row">
+    <img id="image-preview" alt="Selected image preview">
+    <button id="remove-image-btn">Remove</button>
+  </div>
+</div>
+
+<div id="messages"></div>
+<div id="empty" style="display:none;">No messages yet. Be the first to say something.</div>
+<div id="status">Loading...</div>
+
+<script>
+const msgInput = document.getElementById('msg-input');
+const sendBtn = document.getElementById('send-btn');
+const messagesEl = document.getElementById('messages');
+const emptyEl = document.getElementById('empty');
+const statusEl = document.getElementById('status');
+const imageBtn = document.getElementById('image-btn');
+const imageInput = document.getElementById('image-input');
+const imagePreviewRow = document.getElementById('image-preview-row');
+const imagePreview = document.getElementById('image-preview');
+const removeImageBtn = document.getElementById('remove-image-btn');
+
+let pendingImage = null;
+
+function compressImage(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 900;
+        let w = img.width, h = img.height;
+        if (w > maxDim || h > maxDim) {
+          const scale = maxDim / Math.max(w, h);
+          w = Math.round(w * scale);
+          h = Math.round(h * scale);
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+imageBtn.addEventListener('click', () => imageInput.click());
+
+imageInput.addEventListener('change', async () => {
+  const file = imageInput.files[0];
+  if (!file) return;
+  try {
+    pendingImage = await compressImage(file);
+    imagePreview.src = pendingImage;
+    imagePreviewRow.style.display = 'flex';
+  } catch (e) {
+    statusEl.textContent = 'Could not load that image.';
+  }
+  imageInput.value = '';
+});
+
+removeImageBtn.addEventListener('click', () => {
+  pendingImage = null;
+  imagePreviewRow.style.display = 'none';
+  imagePreview.src = '';
+});
+
+function formatTime(ts) {
+  const d = new Date(ts);
+  return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+}
+
+let openReplyId = null;
+
+function render(list) {
+  messagesEl.innerHTML = '';
+  if (!list || list.length === 0) {
+    emptyEl.style.display = 'block';
+    return;
+  }
+  emptyEl.style.display = 'none';
+  list.slice().reverse().forEach(m => {
+    const div = document.createElement('div');
+    div.className = 'msg';
+
+    const time = document.createElement('div');
+    time.className = 'msg-time';
+    time.textContent = formatTime(m.ts);
+
+    const text = document.createElement('div');
+    text.className = 'msg-text';
+    text.textContent = m.text;
+
+    div.appendChild(time);
+    if (m.image) {
+      const img = document.createElement('img');
+      img.className = 'msg-image';
+      img.src = m.image;
+      img.alt = 'Attached image';
+      div.appendChild(img);
+    }
+    div.appendChild(text);
+
+    if (m.replies && m.replies.length > 0) {
+      const repliesEl = document.createElement('div');
+      repliesEl.className = 'replies';
+      m.replies.forEach(r => {
+        const rDiv = document.createElement('div');
+        const rTime = document.createElement('div');
+        rTime.className = 'msg-time';
+        rTime.textContent = formatTime(r.ts);
+        const rText = document.createElement('div');
+        rText.className = 'reply-text';
+        rText.textContent = r.text;
+        rDiv.appendChild(rTime);
+        rDiv.appendChild(rText);
+        repliesEl.appendChild(rDiv);
+      });
+      div.appendChild(repliesEl);
+    }
+
+    const toggle = document.createElement('button');
+    toggle.className = 'reply-toggle';
+    toggle.textContent = 'Reply';
+    toggle.addEventListener('click', () => {
+      openReplyId = openReplyId === m.id ? null : m.id;
+      render(list);
+    });
+    div.appendChild(toggle);
+
+    if (openReplyId === m.id) {
+      const composeEl = document.createElement('div');
+      composeEl.className = 'reply-compose';
+      const rInput = document.createElement('textarea');
+      rInput.placeholder = 'Write a reply...';
+      rInput.maxLength = 1000;
+      const rBtn = document.createElement('button');
+      rBtn.textContent = 'Reply';
+      rBtn.addEventListener('click', () => sendReply(m.id, rInput, rBtn));
+      rInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+          e.preventDefault();
+          sendReply(m.id, rInput, rBtn);
+        }
+      });
+      composeEl.appendChild(rInput);
+      composeEl.appendChild(rBtn);
+      div.appendChild(composeEl);
+    }
+
+    messagesEl.appendChild(div);
+  });
+}
+
+async function loadMessages() {
+  try {
+    const result = await window.storage.get('messages', true);
+    const list = result ? JSON.parse(result.value) : [];
+    if (openReplyId === null) render(list);
+    statusEl.textContent = '';
+    return list;
+  } catch (e) {
+    if (openReplyId === null) render([]);
+    statusEl.textContent = '';
+    return [];
+  }
+}
+
+async function sendMessage() {
+  const text = msgInput.value.trim();
+  if (!text && !pendingImage) return;
+  sendBtn.disabled = true;
+  try {
+    const list = await loadMessages();
+    list.push({
+      id: Date.now() + '-' + Math.random().toString(36).slice(2),
+      text,
+      image: pendingImage,
+      ts: Date.now(),
+      replies: []
+    });
+    await window.storage.set('messages', JSON.stringify(list), true);
+    msgInput.value = '';
+    pendingImage = null;
+    imagePreviewRow.style.display = 'none';
+    imagePreview.src = '';
+    render(list);
+  } catch (e) {
+    statusEl.textContent = 'Could not send. Try again.';
+  } finally {
+    sendBtn.disabled = false;
+  }
+}
+
+async function sendReply(msgId, inputEl, btnEl) {
+  const text = inputEl.value.trim();
+  if (!text) return;
+  btnEl.disabled = true;
+  try {
+    const list = await loadMessages();
+    const target = list.find(m => m.id === msgId);
+    if (target) {
+      if (!target.replies) target.replies = [];
+      target.replies.push({ text, ts: Date.now() });
+      await window.storage.set('messages', JSON.stringify(list), true);
+    }
+    openReplyId = null;
+    render(list);
+  } catch (e) {
+    statusEl.textContent = 'Could not send reply. Try again.';
+  } finally {
+    btnEl.disabled = false;
+  }
+}
+
+sendBtn.addEventListener('click', sendMessage);
+msgInput.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+
+loadMessages();
+setInterval(loadMessages, 4000);
+</script>
+
+</body>
+</html>
