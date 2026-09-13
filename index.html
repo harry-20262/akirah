@@ -160,6 +160,9 @@
     margin-top: 12px;
   }
 </style>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 
@@ -181,9 +184,22 @@
 
 <div id="messages"></div>
 <div id="empty" style="display:none;">No messages yet. Be the first to say something.</div>
-<div id="status">Loading...</div>
+<div id="status">Connecting...</div>
 
 <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCWbBaAGnUPFaZv-t1jE7VCMJP0IiCJYHI",
+  authDomain: "shared-messages-1e3fc.firebaseapp.com",
+  databaseURL: "https://shared-messages-1e3fc-default-rtdb.firebaseio.com",
+  projectId: "shared-messages-1e3fc",
+  storageBucket: "shared-messages-1e3fc.firebasestorage.app",
+  messagingSenderId: "995131724643",
+  appId: "1:995131724643:web:241ec0bd8796dbafa1f956"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const messagesRef = db.ref('messages');
+
 const msgInput = document.getElementById('msg-input');
 const sendBtn = document.getElementById('send-btn');
 const messagesEl = document.getElementById('messages');
@@ -250,8 +266,6 @@ function formatTime(ts) {
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
-let openReplyId = null;
-
 function render(list) {
   messagesEl.innerHTML = '';
   if (!list || list.length === 0) {
@@ -281,22 +295,25 @@ function render(list) {
     }
     div.appendChild(text);
 
-    if (m.replies && m.replies.length > 0) {
-      const repliesEl = document.createElement('div');
-      repliesEl.className = 'replies';
-      m.replies.forEach(r => {
-        const rDiv = document.createElement('div');
-        const rTime = document.createElement('div');
-        rTime.className = 'msg-time';
-        rTime.textContent = formatTime(r.ts);
-        const rText = document.createElement('div');
-        rText.className = 'reply-text';
-        rText.textContent = r.text;
-        rDiv.appendChild(rTime);
-        rDiv.appendChild(rText);
-        repliesEl.appendChild(rDiv);
-      });
-      div.appendChild(repliesEl);
+    if (m.replies) {
+      const repliesArr = Object.values(m.replies).sort((a, b) => a.ts - b.ts);
+      if (repliesArr.length > 0) {
+        const repliesEl = document.createElement('div');
+        repliesEl.className = 'replies';
+        repliesArr.forEach(r => {
+          const rDiv = document.createElement('div');
+          const rTime = document.createElement('div');
+          rTime.className = 'msg-time';
+          rTime.textContent = formatTime(r.ts);
+          const rText = document.createElement('div');
+          rText.className = 'reply-text';
+          rText.textContent = r.text;
+          rDiv.appendChild(rTime);
+          rDiv.appendChild(rText);
+          repliesEl.appendChild(rDiv);
+        });
+        div.appendChild(repliesEl);
+      }
     }
 
     const toggle = document.createElement('button');
@@ -332,39 +349,35 @@ function render(list) {
   });
 }
 
-async function loadMessages() {
-  try {
-    const result = await window.storage.get('messages', true);
-    const list = result ? JSON.parse(result.value) : [];
-    if (openReplyId === null) render(list);
-    statusEl.textContent = '';
-    return list;
-  } catch (e) {
-    if (openReplyId === null) render([]);
-    statusEl.textContent = '';
-    return [];
-  }
-}
+let openReplyId = null;
+let latestList = [];
+
+messagesRef.on('value', (snapshot) => {
+  const val = snapshot.val() || {};
+  latestList = Object.keys(val)
+    .map(id => ({ id, ...val[id] }))
+    .sort((a, b) => a.ts - b.ts);
+  statusEl.textContent = '';
+  render(latestList);
+}, (err) => {
+  statusEl.textContent = 'Could not connect. Check your database rules.';
+});
 
 async function sendMessage() {
   const text = msgInput.value.trim();
   if (!text && !pendingImage) return;
   sendBtn.disabled = true;
   try {
-    const list = await loadMessages();
-    list.push({
-      id: Date.now() + '-' + Math.random().toString(36).slice(2),
+    const newMsgRef = messagesRef.push();
+    await newMsgRef.set({
       text,
-      image: pendingImage,
-      ts: Date.now(),
-      replies: []
+      image: pendingImage || null,
+      ts: Date.now()
     });
-    await window.storage.set('messages', JSON.stringify(list), true);
     msgInput.value = '';
     pendingImage = null;
     imagePreviewRow.style.display = 'none';
     imagePreview.src = '';
-    render(list);
   } catch (e) {
     statusEl.textContent = 'Could not send. Try again.';
   } finally {
@@ -377,15 +390,9 @@ async function sendReply(msgId, inputEl, btnEl) {
   if (!text) return;
   btnEl.disabled = true;
   try {
-    const list = await loadMessages();
-    const target = list.find(m => m.id === msgId);
-    if (target) {
-      if (!target.replies) target.replies = [];
-      target.replies.push({ text, ts: Date.now() });
-      await window.storage.set('messages', JSON.stringify(list), true);
-    }
+    const replyRef = db.ref('messages/' + msgId + '/replies').push();
+    await replyRef.set({ text, ts: Date.now() });
     openReplyId = null;
-    render(list);
   } catch (e) {
     statusEl.textContent = 'Could not send reply. Try again.';
   } finally {
@@ -400,9 +407,6 @@ msgInput.addEventListener('keydown', (e) => {
     sendMessage();
   }
 });
-
-loadMessages();
-setInterval(loadMessages, 4000);
 </script>
 
 </body>
