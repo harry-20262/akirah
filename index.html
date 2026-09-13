@@ -244,6 +244,7 @@ firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
 const messagesRef = db.ref('messages');
+const authReady = auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
 
 const LOCK_EMAIL = 'login@shared-messages.local';
 
@@ -257,7 +258,8 @@ function tryPinLogin() {
   if (pin.length !== 4) return;
   pinError.textContent = '';
   pinBoxes.forEach(b => b.disabled = true);
-  auth.signInWithEmailAndPassword(LOCK_EMAIL, 'pin' + pin)
+  authReady
+    .then(() => auth.signInWithEmailAndPassword(LOCK_EMAIL, 'pin' + pin))
     .catch(() => {
       pinError.textContent = 'Wrong PIN. Try again.';
       pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
