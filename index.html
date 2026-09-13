@@ -159,13 +159,56 @@
     text-align: center;
     margin-top: 12px;
   }
+  #lock-screen {
+    max-width: 300px;
+    margin: 80px auto 0;
+    text-align: center;
+  }
+  #lock-screen h1 {
+    margin-bottom: 20px;
+  }
+  #pin-boxes {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .pin-box {
+    width: 48px;
+    height: 56px;
+    text-align: center;
+    font-size: 22px;
+    border: 1px solid #d4d4d1;
+    border-radius: 8px;
+    background: white;
+  }
+  #pin-error {
+    color: #c0392b;
+    font-size: 13px;
+    min-height: 18px;
+    margin-bottom: 8px;
+  }
+  #app-content { display: none; }
 </style>
 
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
 </head>
 <body>
 
+<div id="lock-screen">
+  <h1>Enter PIN</h1>
+  <div id="pin-boxes">
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="0">
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="1">
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="2">
+    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="3">
+  </div>
+  <div id="pin-error"></div>
+</div>
+
+<div id="app-content">
 <h1>Shared messages</h1>
 <p class="sub">Anyone who opens this page can post and see messages here.</p>
 
@@ -185,6 +228,7 @@
 <div id="messages"></div>
 <div id="empty" style="display:none;">No messages yet. Be the first to say something.</div>
 <div id="status">Connecting...</div>
+</div>
 
 <script>
 const firebaseConfig = {
@@ -197,8 +241,58 @@ const firebaseConfig = {
   appId: "1:995131724643:web:241ec0bd8796dbafa1f956"
 };
 firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
 const db = firebase.database();
 const messagesRef = db.ref('messages');
+
+const LOCK_EMAIL = 'login@shared-messages.local';
+
+const lockScreen = document.getElementById('lock-screen');
+const appContent = document.getElementById('app-content');
+const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
+const pinError = document.getElementById('pin-error');
+
+function tryPinLogin() {
+  const pin = pinBoxes.map(b => b.value).join('');
+  if (pin.length !== 4) return;
+  pinError.textContent = '';
+  pinBoxes.forEach(b => b.disabled = true);
+  auth.signInWithEmailAndPassword(LOCK_EMAIL, 'pin' + pin)
+    .catch(() => {
+      pinError.textContent = 'Wrong PIN. Try again.';
+      pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
+      pinBoxes[0].focus();
+    });
+}
+
+pinBoxes.forEach((box, i) => {
+  box.addEventListener('input', () => {
+    box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+    if (box.value && i < pinBoxes.length - 1) {
+      pinBoxes[i + 1].focus();
+    }
+    if (pinBoxes.every(b => b.value.length === 1)) {
+      tryPinLogin();
+    }
+  });
+  box.addEventListener('keydown', (e) => {
+    if (e.key === 'Backspace' && !box.value && i > 0) {
+      pinBoxes[i - 1].focus();
+    }
+  });
+});
+
+auth.onAuthStateChanged((user) => {
+  if (user) {
+    lockScreen.style.display = 'none';
+    appContent.style.display = 'block';
+  } else {
+    lockScreen.style.display = 'block';
+    appContent.style.display = 'none';
+    pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
+    pinBoxes[0].focus();
+  }
+});
 
 const msgInput = document.getElementById('msg-input');
 const sendBtn = document.getElementById('send-btn');
