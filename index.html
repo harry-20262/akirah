@@ -175,6 +175,23 @@
   #change-name-btn:hover { background: var(--card); }
   #change-name-btn svg { width: 16px; height: 16px; }
 
+  #panic-btn {
+    background: var(--paper-raised);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  #panic-btn:hover { background: var(--danger); color: var(--paper-raised); }
+  #panic-btn svg { width: 16px; height: 16px; }
+
   #search-row {
     margin-bottom: 20px;
   }
@@ -509,6 +526,9 @@
     <p class="sub">A page for the two of you. Write something, or reply to what's already here.</p>
   </div>
   <div id="title-actions">
+    <button id="panic-btn" title="Close instantly (Esc)" aria-label="Close instantly">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="2"></rect><path d="M8 11V7a4 4 0 0 1 8 0v4"></path></svg>
+    </button>
     <button id="change-name-btn" title="Change your name" aria-label="Change your name">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c1.5-4 5-5.5 7.5-5.5s6 1.5 7.5 5.5"></path></svg>
     </button>
@@ -605,6 +625,29 @@ const nameInput = document.getElementById('name-input');
 const nameSaveBtn = document.getElementById('name-save-btn');
 const nameCancelBtn = document.getElementById('name-cancel-btn');
 const changeNameBtn = document.getElementById('change-name-btn');
+const panicBtn = document.getElementById('panic-btn');
+
+function panicLock() {
+  // Wipe the screen instantly, before signOut even resolves
+  localStorage.setItem(LOCKOUT_KEY, Date.now() + LOCKOUT_MS);
+  appContent.style.display = 'none';
+  nameScreen.style.display = 'none';
+  nameCancelBtn.style.display = 'none';
+  isRenaming = false;
+  messagesEl.innerHTML = '';
+  msgInput.value = '';
+  pendingImage = null;
+  imagePreviewRow.style.display = 'none';
+  imagePreview.src = '';
+  lockScreen.style.display = 'block';
+  pinBoxes.forEach(b => { b.value = ''; b.nextElementSibling.textContent = ''; b.disabled = false; });
+  startLockoutUI();
+  auth.signOut();
+}
+panicBtn.addEventListener('click', panicLock);
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && appContent.style.display !== 'none') panicLock();
+});
 let currentUserName = localStorage.getItem('marginalia_name') || null;
 let isRenaming = false;
 
@@ -654,7 +697,38 @@ const appContent = document.getElementById('app-content');
 const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
 const pinError = document.getElementById('pin-error');
 
+const LOCKOUT_MS = 5 * 60 * 1000;
+const LOCKOUT_KEY = 'marginalia_lockout_until';
+let lockoutInterval = null;
+
+function getLockoutRemaining() {
+  const until = parseInt(localStorage.getItem(LOCKOUT_KEY) || '0', 10);
+  return Math.max(0, until - Date.now());
+}
+
+function updateLockoutCountdown() {
+  const remaining = getLockoutRemaining();
+  if (remaining <= 0) {
+    clearInterval(lockoutInterval);
+    lockoutInterval = null;
+    pinBoxes.forEach(b => b.disabled = false);
+    pinError.textContent = '';
+    return;
+  }
+  const mins = Math.floor(remaining / 60000);
+  const secs = Math.floor((remaining % 60000) / 1000);
+  pinError.textContent = 'Locked. Try again in ' + mins + ':' + String(secs).padStart(2, '0');
+}
+
+function startLockoutUI() {
+  if (getLockoutRemaining() <= 0) return;
+  pinBoxes.forEach(b => { b.value = ''; b.nextElementSibling.textContent = ''; b.disabled = true; });
+  updateLockoutCountdown();
+  if (!lockoutInterval) lockoutInterval = setInterval(updateLockoutCountdown, 1000);
+}
+
 function tryPinLogin() {
+  if (getLockoutRemaining() > 0) { startLockoutUI(); return; }
   const pin = pinBoxes.map(b => b.value).join('');
   if (pin.length !== 4) return;
   pinError.textContent = '';
@@ -672,6 +746,7 @@ function tryPinLogin() {
 pinBoxes.forEach((box, i) => {
   const dot = box.nextElementSibling;
   box.addEventListener('input', () => {
+    if (getLockoutRemaining() > 0) { startLockoutUI(); return; }
     box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
     dot.textContent = box.value ? '•' : '';
     if (box.value && i < pinBoxes.length - 1) {
@@ -687,6 +762,8 @@ pinBoxes.forEach((box, i) => {
     }
   });
 });
+
+startLockoutUI();
 
 auth.onAuthStateChanged((user) => {
   if (user) {
@@ -707,8 +784,9 @@ auth.onAuthStateChanged((user) => {
     nameScreen.style.display = 'none';
     nameCancelBtn.style.display = 'none';
     isRenaming = false;
-    pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
+    pinBoxes.forEach(b => { b.value = ''; b.nextElementSibling.textContent = ''; b.disabled = false; });
     pinBoxes[0].focus();
+    startLockoutUI();
     detachMessagesListener();
     currentMessagesRef = null;
     currentPresenceRef = null;
