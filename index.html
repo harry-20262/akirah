@@ -641,7 +641,7 @@ function panicLock() {
   imagePreview.src = '';
   lockScreen.style.display = 'block';
   pinBoxes.forEach(b => { b.value = ''; b.nextElementSibling.textContent = ''; b.disabled = false; });
-  startLockoutUI();
+  pinBoxes[0].focus();
   auth.signOut();
 }
 panicBtn.addEventListener('click', panicLock);
@@ -699,54 +699,33 @@ const pinError = document.getElementById('pin-error');
 
 const LOCKOUT_MS = 5 * 60 * 1000;
 const LOCKOUT_KEY = 'marginalia_lockout_until';
-let lockoutInterval = null;
 
 function getLockoutRemaining() {
   const until = parseInt(localStorage.getItem(LOCKOUT_KEY) || '0', 10);
   return Math.max(0, until - Date.now());
 }
 
-function updateLockoutCountdown() {
-  const remaining = getLockoutRemaining();
-  if (remaining <= 0) {
-    clearInterval(lockoutInterval);
-    lockoutInterval = null;
-    pinBoxes.forEach(b => b.disabled = false);
-    pinError.textContent = '';
-    return;
-  }
-  const mins = Math.floor(remaining / 60000);
-  const secs = Math.floor((remaining % 60000) / 1000);
-  pinError.textContent = 'Locked. Try again in ' + mins + ':' + String(secs).padStart(2, '0');
-}
-
-function startLockoutUI() {
-  if (getLockoutRemaining() <= 0) return;
-  pinBoxes.forEach(b => { b.value = ''; b.nextElementSibling.textContent = ''; b.disabled = true; });
-  updateLockoutCountdown();
-  if (!lockoutInterval) lockoutInterval = setInterval(updateLockoutCountdown, 1000);
+function rejectAsWrongPin() {
+  pinError.textContent = 'Wrong PIN. Try again.';
+  pinBoxes.forEach(b => { b.value = ''; b.disabled = false; b.nextElementSibling.textContent = ''; });
+  pinBoxes[0].focus();
 }
 
 function tryPinLogin() {
-  if (getLockoutRemaining() > 0) { startLockoutUI(); return; }
   const pin = pinBoxes.map(b => b.value).join('');
   if (pin.length !== 4) return;
+  if (getLockoutRemaining() > 0) { rejectAsWrongPin(); return; }
   pinError.textContent = '';
   pinBoxes.forEach(b => b.disabled = true);
   authReady
     .then(() => auth.signInWithEmailAndPassword(roomEmailForPin(pin), ROOM_PASSWORD))
     .catch(() => auth.signInWithEmailAndPassword(LOCK_EMAIL, 'pin' + pin))
-    .catch(() => {
-      pinError.textContent = 'Wrong PIN. Try again.';
-      pinBoxes.forEach(b => { b.value = ''; b.disabled = false; b.nextElementSibling.textContent = ''; });
-      pinBoxes[0].focus();
-    });
+    .catch(rejectAsWrongPin);
 }
 
 pinBoxes.forEach((box, i) => {
   const dot = box.nextElementSibling;
   box.addEventListener('input', () => {
-    if (getLockoutRemaining() > 0) { startLockoutUI(); return; }
     box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
     dot.textContent = box.value ? '•' : '';
     if (box.value && i < pinBoxes.length - 1) {
@@ -762,8 +741,6 @@ pinBoxes.forEach((box, i) => {
     }
   });
 });
-
-startLockoutUI();
 
 auth.onAuthStateChanged((user) => {
   if (user) {
@@ -786,7 +763,6 @@ auth.onAuthStateChanged((user) => {
     isRenaming = false;
     pinBoxes.forEach(b => { b.value = ''; b.nextElementSibling.textContent = ''; b.disabled = false; });
     pinBoxes[0].focus();
-    startLockoutUI();
     detachMessagesListener();
     currentMessagesRef = null;
     currentPresenceRef = null;
