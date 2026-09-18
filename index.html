@@ -71,6 +71,19 @@
     max-width: 42ch;
   }
 
+  #streak-badge {
+    display: none;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: var(--gold);
+    font-weight: 500;
+    margin-top: -14px;
+    margin-bottom: 22px;
+  }
+  #streak-badge.show { display: flex; }
+  #streak-badge svg { width: 14px; height: 14px; }
+
   input, textarea, button {
     font-family: inherit;
     font-size: 14px;
@@ -194,20 +207,22 @@
 
   #search-row {
     margin-bottom: 20px;
+    max-width: 220px;
   }
   #search-input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 5px 10px;
     border: 1px solid var(--line);
-    border-radius: 6px;
+    border-radius: 14px;
     background: var(--paper-raised);
     color: var(--ink);
+    font-size: 12.5px;
   }
   #search-input:focus { outline: none; border-color: var(--pine); }
   #search-count {
-    font-size: 12px;
+    font-size: 11px;
     color: var(--ink-faint);
-    margin-top: 6px;
+    margin-top: 5px;
   }
 
   #image-preview-row {
@@ -524,6 +539,7 @@
   <div>
     <h1>Marginalia</h1>
     <p class="sub">A page for the two of you. Write something, or reply to what's already here.</p>
+    <div id="streak-badge"></div>
   </div>
   <div id="title-actions">
     <button id="panic-btn" title="Close instantly (Esc)" aria-label="Close instantly">
@@ -904,7 +920,36 @@ function toggleHeart(msgId, reactions) {
   }
 }
 
+const streakBadge = document.getElementById('streak-badge');
+const FLAME_SVG = '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2c1 3-3 4-3 7.5a3 3 0 0 0 6 0c0-1-.5-1.8-1-2.5 2 .8 4 3 4 6a6 6 0 1 1-12 0c0-4.5 3-6 6-11z"/></svg>';
+
+function computeStreak(list) {
+  if (!list || list.length === 0) return 0;
+  const days = new Set(list.map(m => new Date(m.ts).toDateString()));
+  let streak = 0;
+  let cursor = new Date();
+  if (!days.has(cursor.toDateString())) {
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  while (days.has(cursor.toDateString())) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+function updateStreakBadge(list) {
+  const streak = computeStreak(list);
+  if (streak >= 2) {
+    streakBadge.innerHTML = FLAME_SVG + '<span>' + streak + '-day streak</span>';
+    streakBadge.classList.add('show');
+  } else {
+    streakBadge.classList.remove('show');
+  }
+}
+
 function render(list) {
+  updateStreakBadge(list);
   messagesEl.innerHTML = '';
   let filtered = list;
   if (searchQuery) {
