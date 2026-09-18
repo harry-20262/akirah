@@ -153,6 +153,28 @@
   #theme-toggle:hover { background: var(--card); }
   #theme-toggle svg { width: 17px; height: 17px; }
 
+  #title-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  #change-name-btn {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  #change-name-btn:hover { background: var(--card); }
+  #change-name-btn svg { width: 16px; height: 16px; }
+
   #search-row {
     margin-bottom: 20px;
   }
@@ -477,6 +499,7 @@
   <p class="sub">What should we call you on this device? Only used to tell your messages apart.</p>
   <input type="text" id="name-input" placeholder="Your name" maxlength="24">
   <button id="name-save-btn" style="width:100%;">Continue</button>
+  <button id="name-cancel-btn" style="width:100%; margin-top:8px; background:var(--paper-raised); border-color:var(--line); color:var(--ink-soft); display:none;">Cancel</button>
 </div>
 
 <div id="app-content">
@@ -485,9 +508,14 @@
     <h1>Marginalia</h1>
     <p class="sub">A page for the two of you. Write something, or reply to what's already here.</p>
   </div>
-  <button id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
-    <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
-  </button>
+  <div id="title-actions">
+    <button id="change-name-btn" title="Change your name" aria-label="Change your name">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.5"></circle><path d="M4.5 20c1.5-4 5-5.5 7.5-5.5s6 1.5 7.5 5.5"></path></svg>
+    </button>
+    <button id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+      <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
+    </button>
+  </div>
 </div>
 
 <div id="search-row">
@@ -575,7 +603,10 @@ initTheme();
 const nameScreen = document.getElementById('name-screen');
 const nameInput = document.getElementById('name-input');
 const nameSaveBtn = document.getElementById('name-save-btn');
+const nameCancelBtn = document.getElementById('name-cancel-btn');
+const changeNameBtn = document.getElementById('change-name-btn');
 let currentUserName = localStorage.getItem('marginalia_name') || null;
+let isRenaming = false;
 
 function keyify(str) {
   return str.replace(/[.#$\[\]\/]/g, '_');
@@ -589,8 +620,33 @@ function saveName() {
   currentUserName = v;
   localStorage.setItem('marginalia_name', v);
   nameScreen.style.display = 'none';
-  showApp();
+  nameCancelBtn.style.display = 'none';
+  if (isRenaming) {
+    isRenaming = false;
+    appContent.style.display = 'block';
+    markSeenNow();
+    render(latestList);
+  } else {
+    showApp();
+  }
 }
+
+changeNameBtn.addEventListener('click', () => {
+  isRenaming = true;
+  nameInput.value = currentUserName || '';
+  nameCancelBtn.style.display = 'block';
+  appContent.style.display = 'none';
+  nameScreen.style.display = 'block';
+  nameInput.focus();
+  nameInput.select();
+});
+
+nameCancelBtn.addEventListener('click', () => {
+  isRenaming = false;
+  nameScreen.style.display = 'none';
+  nameCancelBtn.style.display = 'none';
+  appContent.style.display = 'block';
+});
 
 /* ---------- Lock screen / PIN ---------- */
 const lockScreen = document.getElementById('lock-screen');
@@ -649,6 +705,8 @@ auth.onAuthStateChanged((user) => {
     lockScreen.style.display = 'block';
     appContent.style.display = 'none';
     nameScreen.style.display = 'none';
+    nameCancelBtn.style.display = 'none';
+    isRenaming = false;
     pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
     pinBoxes[0].focus();
     detachMessagesListener();
@@ -657,10 +715,14 @@ auth.onAuthStateChanged((user) => {
   }
 });
 
+let listenersAttached = false;
 function showApp() {
   appContent.style.display = 'block';
-  attachMessagesListener();
-  attachPresenceListener();
+  if (!listenersAttached) {
+    attachMessagesListener();
+    attachPresenceListener();
+    listenersAttached = true;
+  }
   markSeenNow();
   setTimeout(() => msgInput.focus(), 50);
 }
