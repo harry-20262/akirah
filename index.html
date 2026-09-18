@@ -351,10 +351,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
-const messagesRef = db.ref('messages');
 const authReady = auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
+let currentMessagesRef = null;
 
-const LOCK_EMAIL = 'login@shared-messages.local';
+const LOCK_EMAIL = 'login@shared-messages.local'; // your original room — unchanged
+const ROOM_PASSWORD = 'notesapp'; // fixed password used for any additional room accounts you create
+
+function roomEmailForPin(pin) {
+  return 'login-' + pin + '@shared-messages.local';
+}
 
 const lockScreen = document.getElementById('lock-screen');
 const appContent = document.getElementById('app-content');
@@ -367,7 +372,8 @@ function tryPinLogin() {
   pinError.textContent = '';
   pinBoxes.forEach(b => b.disabled = true);
   authReady
-    .then(() => auth.signInWithEmailAndPassword(LOCK_EMAIL, 'pin' + pin))
+    .then(() => auth.signInWithEmailAndPassword(roomEmailForPin(pin), ROOM_PASSWORD))
+    .catch(() => auth.signInWithEmailAndPassword(LOCK_EMAIL, 'pin' + pin))
     .catch(() => {
       pinError.textContent = 'Wrong PIN. Try again.';
       pinBoxes.forEach(b => { b.value = ''; b.disabled = false; b.nextElementSibling.textContent = ''; });
@@ -396,6 +402,8 @@ pinBoxes.forEach((box, i) => {
 
 auth.onAuthStateChanged((user) => {
   if (user) {
+    const path = (user.email === LOCK_EMAIL) ? 'messages' : ('rooms/' + user.uid + '/messages');
+    currentMessagesRef = db.ref(path);
     lockScreen.style.display = 'none';
     appContent.style.display = 'block';
     attachMessagesListener();
@@ -405,6 +413,7 @@ auth.onAuthStateChanged((user) => {
     pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
     pinBoxes[0].focus();
     detachMessagesListener();
+    currentMessagesRef = null;
   }
 });
 
@@ -576,7 +585,7 @@ let openReplyId = null;
 let latestList = [];
 
 function attachMessagesListener() {
-  messagesRef.on('value', (snapshot) => {
+  currentMessagesRef.on('value', (snapshot) => {
     const val = snapshot.val() || {};
     latestList = Object.keys(val)
       .map(id => ({ id, ...val[id] }))
@@ -589,7 +598,7 @@ function attachMessagesListener() {
 }
 
 function detachMessagesListener() {
-  messagesRef.off();
+  if (currentMessagesRef) currentMessagesRef.off();
 }
 
 async function sendMessage() {
@@ -597,7 +606,7 @@ async function sendMessage() {
   if (!text && !pendingImage) return;
   sendBtn.disabled = true;
   try {
-    const newMsgRef = messagesRef.push();
+    const newMsgRef = currentMessagesRef.push();
     await newMsgRef.set({
       text,
       image: pendingImage || null,
@@ -619,7 +628,7 @@ async function sendReply(msgId, inputEl, btnEl) {
   if (!text) return;
   btnEl.disabled = true;
   try {
-    const replyRef = db.ref('messages/' + msgId + '/replies').push();
+    const replyRef = currentMessagesRef.child(msgId).child('replies').push();
     await replyRef.set({ text, ts: Date.now() });
     openReplyId = null;
   } catch (e) {
