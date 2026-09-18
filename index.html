@@ -141,7 +141,40 @@
     border-radius: 6px;
     margin-bottom: 8px;
     display: block;
+    cursor: pointer;
   }
+
+  #lightbox {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 20, 18, 0.92);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    cursor: zoom-out;
+  }
+  #lightbox.open { display: flex; }
+  #lightbox img {
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 8px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+  #lightbox-close {
+    position: absolute;
+    top: 18px;
+    right: 22px;
+    background: none;
+    border: none;
+    color: var(--paper-raised);
+    font-size: 28px;
+    line-height: 1;
+    padding: 4px 10px;
+    cursor: pointer;
+  }
+  #lightbox-close:hover { background: rgba(255,255,255,0.1); }
 
   #messages {
     display: flex;
@@ -174,12 +207,12 @@
   .reply-toggle {
     background: none;
     border: none;
-    color: var(--ink-faint);
+    color: var(--danger);
     font-size: 12px;
     padding: 8px 0 0;
     cursor: pointer;
   }
-  .reply-toggle:hover { color: var(--pine-dark); background: none; }
+  .reply-toggle:hover { color: #8a2f2f; background: none; }
 
   .replies {
     margin-top: 10px;
@@ -336,6 +369,11 @@
 <div id="messages"></div>
 <div id="empty" style="display:none;">Nothing written yet. Be the first.</div>
 <div id="status">Connecting...</div>
+</div>
+
+<div id="lightbox">
+  <button id="lightbox-close" aria-label="Close">&times;</button>
+  <img id="lightbox-img" alt="Full size image">
 </div>
 
 <script>
@@ -523,6 +561,7 @@ function render(list) {
       img.className = 'msg-image';
       img.src = m.image;
       img.alt = 'Attached image';
+      img.addEventListener('click', () => openLightbox(m.image));
       div.appendChild(img);
     }
     div.appendChild(text);
@@ -583,6 +622,25 @@ function render(list) {
 
 let openReplyId = null;
 let latestList = [];
+
+const lightbox = document.getElementById('lightbox');
+const lightboxImg = document.getElementById('lightbox-img');
+const lightboxClose = document.getElementById('lightbox-close');
+
+function openLightbox(src) {
+  lightboxImg.src = src;
+  lightbox.classList.add('open');
+}
+function closeLightbox() {
+  lightbox.classList.remove('open');
+  lightboxImg.src = '';
+}
+lightbox.addEventListener('click', closeLightbox);
+lightboxClose.addEventListener('click', (e) => { e.stopPropagation(); closeLightbox(); });
+lightboxImg.addEventListener('click', (e) => e.stopPropagation());
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeLightbox();
+});
 
 function attachMessagesListener() {
   currentMessagesRef.on('value', (snapshot) => {
