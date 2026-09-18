@@ -21,6 +21,20 @@
     --danger: #A63D3D;
   }
 
+  :root[data-theme="dark"] {
+    --paper: #181F1C;
+    --paper-raised: #202924;
+    --ink: #E7ECE8;
+    --ink-soft: #A7B3AC;
+    --ink-faint: #6E7A73;
+    --pine: #5FA396;
+    --pine-dark: #3D6B63;
+    --gold: #D6B45C;
+    --card: #222C27;
+    --line: #333F38;
+    --danger: #D98787;
+  }
+
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
     max-width: 640px;
@@ -30,6 +44,7 @@
     color: var(--ink);
     border-left: 6px solid var(--pine-dark);
     min-height: 100vh;
+    transition: background 0.2s ease, color 0.2s ease;
   }
 
   h1 {
@@ -39,6 +54,13 @@
     font-style: italic;
     margin: 0 0 6px;
     letter-spacing: -0.01em;
+  }
+
+  #title-row {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
   }
 
   p.sub {
@@ -58,7 +80,7 @@
     display: flex;
     flex-direction: column;
     gap: 10px;
-    margin-bottom: 28px;
+    margin-bottom: 20px;
     padding-bottom: 24px;
     border-bottom: 1px solid var(--line);
   }
@@ -84,10 +106,7 @@
     min-height: 56px;
     line-height: 1.5;
   }
-  textarea:focus, .pin-box:focus {
-    outline: none;
-    border-color: var(--pine);
-  }
+  textarea:focus, .pin-box:focus, #name-input:focus { outline: none; border-color: var(--pine); }
 
   button {
     padding: 9px 16px;
@@ -116,6 +135,41 @@
   }
   .icon-btn:hover { background: var(--card); }
   .icon-btn svg { width: 18px; height: 18px; }
+
+  #theme-toggle {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 4px;
+  }
+  #theme-toggle:hover { background: var(--card); }
+  #theme-toggle svg { width: 17px; height: 17px; }
+
+  #search-row {
+    margin-bottom: 20px;
+  }
+  #search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper-raised);
+    color: var(--ink);
+  }
+  #search-input:focus { outline: none; border-color: var(--pine); }
+  #search-count {
+    font-size: 12px;
+    color: var(--ink-faint);
+    margin-top: 6px;
+  }
 
   #image-preview-row {
     display: none;
@@ -189,12 +243,32 @@
     padding: 12px 16px;
   }
 
+  .msg-meta {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    flex-wrap: wrap;
+    margin-bottom: 5px;
+  }
+
   .msg-time {
     font-family: 'Fraunces', serif;
     font-style: italic;
     font-size: 12px;
     color: var(--gold);
-    margin-bottom: 5px;
+  }
+
+  .msg-sender {
+    font-size: 11px;
+    color: var(--ink-faint);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .msg-edited, .msg-seen {
+    font-size: 11px;
+    color: var(--ink-faint);
+    font-style: italic;
   }
 
   .msg-text {
@@ -204,15 +278,52 @@
     word-break: break-word;
   }
 
-  .reply-toggle {
+  .edit-textarea {
+    width: 100%;
+    padding: 8px 10px;
+    border: 1px solid var(--pine);
+    border-radius: 6px;
+    background: var(--paper-raised);
+    color: var(--ink);
+    min-height: 50px;
+    margin-bottom: 6px;
+  }
+
+  .msg-actions {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 8px;
+    flex-wrap: wrap;
+  }
+
+  .heart-btn {
     background: none;
     border: none;
-    color: var(--danger);
-    font-size: 12px;
-    padding: 8px 0 0;
+    padding: 0;
+    color: var(--ink-faint);
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    gap: 4px;
     cursor: pointer;
   }
-  .reply-toggle:hover { color: #8a2f2f; background: none; }
+  .heart-btn:hover { background: none; color: var(--danger); }
+  .heart-btn.active { color: var(--danger); }
+  .heart-btn svg { width: 15px; height: 15px; }
+
+  .text-action {
+    background: none;
+    border: none;
+    font-size: 12px;
+    padding: 0;
+    cursor: pointer;
+  }
+  .text-action:hover { background: none; }
+  .reply-toggle, .delete-action { color: var(--danger); }
+  .reply-toggle:hover, .delete-action:hover { color: #8a2f2f; }
+  .edit-action { color: var(--ink-soft); }
+  .edit-action:hover { color: var(--ink); }
 
   .replies {
     margin-top: 10px;
@@ -244,6 +355,14 @@
     font-size: 13px;
   }
 
+  .edit-row {
+    display: flex;
+    gap: 6px;
+  }
+  .edit-row button { padding: 6px 12px; font-size: 12px; }
+  .edit-cancel { background: var(--paper-raised); border-color: var(--line); color: var(--ink-soft); }
+  .edit-cancel:hover { background: var(--card); }
+
   #empty {
     text-align: center;
     color: var(--ink-faint);
@@ -260,16 +379,16 @@
     margin-top: 16px;
   }
 
-  #lock-screen {
+  #lock-screen, #name-screen {
     max-width: 280px;
     margin: 100px auto 0;
     text-align: center;
   }
-  #lock-screen h1 {
+  #lock-screen h1, #name-screen h1 {
     font-size: 22px;
     margin-bottom: 4px;
   }
-  #lock-screen p.sub {
+  #lock-screen p.sub, #name-screen p.sub {
     margin: 0 auto 32px;
     text-align: center;
   }
@@ -319,7 +438,17 @@
     min-height: 18px;
     margin-bottom: 8px;
   }
-  #app-content { display: none; }
+  #name-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--paper-raised);
+    color: var(--ink);
+    text-align: center;
+    margin-bottom: 14px;
+  }
+  #app-content, #name-screen { display: none; }
 </style>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -343,9 +472,28 @@
   <div id="pin-error"></div>
 </div>
 
+<div id="name-screen">
+  <h1>One more thing</h1>
+  <p class="sub">What should we call you on this device? Only used to tell your messages apart.</p>
+  <input type="text" id="name-input" placeholder="Your name" maxlength="24">
+  <button id="name-save-btn" style="width:100%;">Continue</button>
+</div>
+
 <div id="app-content">
-<h1>Marginalia</h1>
-<p class="sub">A page for the two of you. Write something, or reply to what's already here.</p>
+<div id="title-row">
+  <div>
+    <h1>Marginalia</h1>
+    <p class="sub">A page for the two of you. Write something, or reply to what's already here.</p>
+  </div>
+  <button id="theme-toggle" title="Toggle dark mode" aria-label="Toggle dark mode">
+    <svg id="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></svg>
+  </button>
+</div>
+
+<div id="search-row">
+  <input type="text" id="search-input" placeholder="Search messages...">
+  <div id="search-count"></div>
+</div>
 
 <div id="compose">
   <textarea id="msg-input" placeholder="Write a message..." maxlength="1000"></textarea>
@@ -391,6 +539,8 @@ const auth = firebase.auth();
 const db = firebase.database();
 const authReady = auth.setPersistence(firebase.auth.Auth.Persistence.NONE);
 let currentMessagesRef = null;
+let currentPresenceRef = null;
+let currentRoomKey = null;
 
 const LOCK_EMAIL = 'login@shared-messages.local'; // your original room — unchanged
 const ROOM_PASSWORD = 'notesapp'; // fixed password used for any additional room accounts you create
@@ -399,6 +549,50 @@ function roomEmailForPin(pin) {
   return 'login-' + pin + '@shared-messages.local';
 }
 
+/* ---------- Theme ---------- */
+const SUN_PATH = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>';
+const MOON_PATH = '<path d="M21 12.6A9 9 0 1 1 11.4 3a7 7 0 0 0 9.6 9.6z"/>';
+const themeToggle = document.getElementById('theme-toggle');
+const themeIcon = document.getElementById('theme-icon');
+
+function applyTheme(theme) {
+  document.documentElement.setAttribute('data-theme', theme);
+  themeIcon.innerHTML = theme === 'dark' ? SUN_PATH : MOON_PATH;
+}
+function initTheme() {
+  const saved = localStorage.getItem('marginalia_theme');
+  const theme = saved || (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+  applyTheme(theme);
+}
+themeToggle.addEventListener('click', () => {
+  const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
+  localStorage.setItem('marginalia_theme', next);
+  applyTheme(next);
+});
+initTheme();
+
+/* ---------- Identity (device-local name) ---------- */
+const nameScreen = document.getElementById('name-screen');
+const nameInput = document.getElementById('name-input');
+const nameSaveBtn = document.getElementById('name-save-btn');
+let currentUserName = localStorage.getItem('marginalia_name') || null;
+
+function keyify(str) {
+  return str.replace(/[.#$\[\]\/]/g, '_');
+}
+
+nameSaveBtn.addEventListener('click', saveName);
+nameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') saveName(); });
+function saveName() {
+  const v = nameInput.value.trim();
+  if (!v) return;
+  currentUserName = v;
+  localStorage.setItem('marginalia_name', v);
+  nameScreen.style.display = 'none';
+  showApp();
+}
+
+/* ---------- Lock screen / PIN ---------- */
 const lockScreen = document.getElementById('lock-screen');
 const appContent = document.getElementById('app-content');
 const pinBoxes = Array.from(document.querySelectorAll('.pin-box'));
@@ -440,21 +634,38 @@ pinBoxes.forEach((box, i) => {
 
 auth.onAuthStateChanged((user) => {
   if (user) {
-    const path = (user.email === LOCK_EMAIL) ? 'messages' : ('rooms/' + user.uid + '/messages');
-    currentMessagesRef = db.ref(path);
+    currentRoomKey = user.email;
+    const base = (user.email === LOCK_EMAIL) ? '' : ('rooms/' + user.uid + '/');
+    currentMessagesRef = db.ref(base + 'messages');
+    currentPresenceRef = db.ref(base + 'presence');
     lockScreen.style.display = 'none';
-    appContent.style.display = 'block';
-    attachMessagesListener();
+    if (!currentUserName) {
+      nameScreen.style.display = 'block';
+      nameInput.focus();
+    } else {
+      showApp();
+    }
   } else {
     lockScreen.style.display = 'block';
     appContent.style.display = 'none';
+    nameScreen.style.display = 'none';
     pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
     pinBoxes[0].focus();
     detachMessagesListener();
     currentMessagesRef = null;
+    currentPresenceRef = null;
   }
 });
 
+function showApp() {
+  appContent.style.display = 'block';
+  attachMessagesListener();
+  attachPresenceListener();
+  markSeenNow();
+  setTimeout(() => msgInput.focus(), 50);
+}
+
+/* ---------- Compose ---------- */
 const msgInput = document.getElementById('msg-input');
 const sendBtn = document.getElementById('send-btn');
 const messagesEl = document.getElementById('messages');
@@ -467,6 +678,8 @@ const cameraInput = document.getElementById('camera-input');
 const imagePreviewRow = document.getElementById('image-preview-row');
 const imagePreview = document.getElementById('image-preview');
 const removeImageBtn = document.getElementById('remove-image-btn');
+const searchInput = document.getElementById('search-input');
+const searchCount = document.getElementById('search-count');
 
 let pendingImage = null;
 
@@ -508,7 +721,6 @@ async function handleFileSelected(file) {
   }
 }
 
-// Gallery picker
 imageBtn.addEventListener('click', () => imageInput.click());
 imageInput.addEventListener('change', async () => {
   const file = imageInput.files[0];
@@ -516,8 +728,6 @@ imageInput.addEventListener('change', async () => {
   imageInput.value = '';
 });
 
-// Camera capture — capture="environment" opens the device camera directly on mobile;
-// on desktop browsers without a camera-aware picker, it falls back to a normal file dialog.
 cameraBtn.addEventListener('click', () => cameraInput.click());
 cameraInput.addEventListener('change', async () => {
   const file = cameraInput.files[0];
@@ -536,26 +746,95 @@ function formatTime(ts) {
   return d.toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
+/* ---------- Presence / seen ---------- */
+let presenceData = {};
+function markSeenNow() {
+  if (!currentPresenceRef || !currentUserName) return;
+  currentPresenceRef.child(keyify(currentUserName)).set(Date.now());
+}
+function attachPresenceListener() {
+  currentPresenceRef.on('value', (snap) => {
+    presenceData = snap.val() || {};
+    render(latestList);
+  });
+}
+setInterval(() => { if (document.visibilityState === 'visible') markSeenNow(); }, 20000);
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') markSeenNow(); });
+
+function seenByOther(ts) {
+  return Object.keys(presenceData).some(nameKey => {
+    return nameKey !== keyify(currentUserName) && presenceData[nameKey] >= ts;
+  });
+}
+
+/* ---------- Render ---------- */
+let openReplyId = null;
+let openEditId = null;
+let latestList = [];
+let searchQuery = '';
+
+searchInput.addEventListener('input', () => {
+  searchQuery = searchInput.value.trim().toLowerCase();
+  render(latestList);
+});
+
+function toggleHeart(msgId, reactions) {
+  const key = keyify(currentUserName);
+  const ref = currentMessagesRef.child(msgId).child('reactions').child(key);
+  if (reactions && reactions[key]) {
+    ref.remove();
+  } else {
+    ref.set(true);
+  }
+}
+
 function render(list) {
   messagesEl.innerHTML = '';
-  if (!list || list.length === 0) {
+  let filtered = list;
+  if (searchQuery) {
+    filtered = list.filter(m => (m.text || '').toLowerCase().includes(searchQuery));
+    searchCount.textContent = filtered.length + ' match' + (filtered.length === 1 ? '' : 'es');
+  } else {
+    searchCount.textContent = '';
+  }
+
+  if (!filtered || filtered.length === 0) {
     emptyEl.style.display = 'block';
+    emptyEl.textContent = searchQuery ? 'No messages match your search.' : "Nothing written yet. Be the first.";
     return;
   }
   emptyEl.style.display = 'none';
-  list.slice().reverse().forEach(m => {
+
+  filtered.slice().reverse().forEach(m => {
     const div = document.createElement('div');
     div.className = 'msg';
 
-    const time = document.createElement('div');
+    const meta = document.createElement('div');
+    meta.className = 'msg-meta';
+    const time = document.createElement('span');
     time.className = 'msg-time';
     time.textContent = formatTime(m.ts);
+    meta.appendChild(time);
+    if (m.sender) {
+      const sender = document.createElement('span');
+      sender.className = 'msg-sender';
+      sender.textContent = m.sender;
+      meta.appendChild(sender);
+    }
+    if (m.edited) {
+      const edited = document.createElement('span');
+      edited.className = 'msg-edited';
+      edited.textContent = 'edited';
+      meta.appendChild(edited);
+    }
+    if (m.sender === currentUserName && seenByOther(m.ts)) {
+      const seen = document.createElement('span');
+      seen.className = 'msg-seen';
+      seen.textContent = 'Seen';
+      meta.appendChild(seen);
+    }
+    div.appendChild(meta);
 
-    const text = document.createElement('div');
-    text.className = 'msg-text';
-    text.textContent = m.text;
-
-    div.appendChild(time);
     if (m.image) {
       const img = document.createElement('img');
       img.className = 'msg-image';
@@ -564,7 +843,75 @@ function render(list) {
       img.addEventListener('click', () => openLightbox(m.image));
       div.appendChild(img);
     }
-    div.appendChild(text);
+
+    if (openEditId === m.id) {
+      const editArea = document.createElement('textarea');
+      editArea.className = 'edit-textarea';
+      editArea.value = m.text;
+      div.appendChild(editArea);
+      const editRow = document.createElement('div');
+      editRow.className = 'edit-row';
+      const saveBtn = document.createElement('button');
+      saveBtn.textContent = 'Save';
+      saveBtn.addEventListener('click', () => saveEdit(m.id, editArea.value));
+      const cancelBtn = document.createElement('button');
+      cancelBtn.className = 'edit-cancel';
+      cancelBtn.textContent = 'Cancel';
+      cancelBtn.addEventListener('click', () => { openEditId = null; render(latestList); });
+      editRow.appendChild(saveBtn);
+      editRow.appendChild(cancelBtn);
+      div.appendChild(editRow);
+    } else {
+      const text = document.createElement('div');
+      text.className = 'msg-text';
+      text.textContent = m.text;
+      div.appendChild(text);
+    }
+
+    const reactions = m.reactions || {};
+    const heartCount = Object.keys(reactions).length;
+    const iReacted = currentUserName && reactions[keyify(currentUserName)];
+
+    const actions = document.createElement('div');
+    actions.className = 'msg-actions';
+
+    const heartBtn = document.createElement('button');
+    heartBtn.className = 'heart-btn' + (iReacted ? ' active' : '');
+    heartBtn.innerHTML = '<svg viewBox="0 0 24 24" fill="' + (iReacted ? 'currentColor' : 'none') + '" stroke="currentColor" stroke-width="1.8"><path d="M12 21s-7.5-4.6-10-9.1C.5 8.4 2.3 5 5.8 5c2 0 3.4 1.1 4.2 2.3C10.8 6.1 12.2 5 14.2 5c3.5 0 5.3 3.4 3.8 6.9C19.5 16.4 12 21 12 21z"/></svg>' + (heartCount > 0 ? '<span>' + heartCount + '</span>' : '');
+    heartBtn.addEventListener('click', () => toggleHeart(m.id, reactions));
+    actions.appendChild(heartBtn);
+
+    const replyToggle = document.createElement('button');
+    replyToggle.className = 'text-action reply-toggle';
+    replyToggle.textContent = 'Reply';
+    replyToggle.addEventListener('click', () => {
+      openReplyId = openReplyId === m.id ? null : m.id;
+      render(latestList);
+    });
+    actions.appendChild(replyToggle);
+
+    if (m.sender === currentUserName) {
+      const editBtn = document.createElement('button');
+      editBtn.className = 'text-action edit-action';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => {
+        openEditId = openEditId === m.id ? null : m.id;
+        render(latestList);
+      });
+      actions.appendChild(editBtn);
+
+      const deleteBtn = document.createElement('button');
+      deleteBtn.className = 'text-action delete-action';
+      deleteBtn.textContent = 'Delete';
+      deleteBtn.addEventListener('click', () => {
+        if (confirm('Delete this message?')) {
+          currentMessagesRef.child(m.id).remove();
+        }
+      });
+      actions.appendChild(deleteBtn);
+    }
+
+    div.appendChild(actions);
 
     if (m.replies) {
       const repliesArr = Object.values(m.replies).sort((a, b) => a.ts - b.ts);
@@ -575,7 +922,7 @@ function render(list) {
           const rDiv = document.createElement('div');
           const rTime = document.createElement('div');
           rTime.className = 'msg-time';
-          rTime.textContent = formatTime(r.ts);
+          rTime.textContent = formatTime(r.ts) + (r.sender ? ' · ' + r.sender : '');
           const rText = document.createElement('div');
           rText.className = 'reply-text';
           rText.textContent = r.text;
@@ -586,15 +933,6 @@ function render(list) {
         div.appendChild(repliesEl);
       }
     }
-
-    const toggle = document.createElement('button');
-    toggle.className = 'reply-toggle';
-    toggle.textContent = 'Reply';
-    toggle.addEventListener('click', () => {
-      openReplyId = openReplyId === m.id ? null : m.id;
-      render(list);
-    });
-    div.appendChild(toggle);
 
     if (openReplyId === m.id) {
       const composeEl = document.createElement('div');
@@ -620,8 +958,12 @@ function render(list) {
   });
 }
 
-let openReplyId = null;
-let latestList = [];
+function saveEdit(msgId, newText) {
+  const text = newText.trim();
+  if (!text) return;
+  currentMessagesRef.child(msgId).update({ text, edited: true, editedTs: Date.now() });
+  openEditId = null;
+}
 
 const lightbox = document.getElementById('lightbox');
 const lightboxImg = document.getElementById('lightbox-img');
@@ -657,6 +999,7 @@ function attachMessagesListener() {
 
 function detachMessagesListener() {
   if (currentMessagesRef) currentMessagesRef.off();
+  if (currentPresenceRef) currentPresenceRef.off();
 }
 
 async function sendMessage() {
@@ -668,16 +1011,19 @@ async function sendMessage() {
     await newMsgRef.set({
       text,
       image: pendingImage || null,
-      ts: Date.now()
+      ts: Date.now(),
+      sender: currentUserName || null
     });
     msgInput.value = '';
     pendingImage = null;
     imagePreviewRow.style.display = 'none';
     imagePreview.src = '';
+    markSeenNow();
   } catch (e) {
     statusEl.textContent = 'Could not send. Try again.';
   } finally {
     sendBtn.disabled = false;
+    msgInput.focus();
   }
 }
 
@@ -687,8 +1033,9 @@ async function sendReply(msgId, inputEl, btnEl) {
   btnEl.disabled = true;
   try {
     const replyRef = currentMessagesRef.child(msgId).child('replies').push();
-    await replyRef.set({ text, ts: Date.now() });
+    await replyRef.set({ text, ts: Date.now(), sender: currentUserName || null });
     openReplyId = null;
+    markSeenNow();
   } catch (e) {
     statusEl.textContent = 'Could not send reply. Try again.';
   } finally {
