@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Shared Notes</title>
+<title>Marginalia</title>
 <style>
   * { box-sizing: border-box; }
 
@@ -243,6 +243,8 @@
     border-bottom: 2px solid var(--ink-faint);
     background: transparent;
     color: var(--ink);
+    -webkit-text-security: disc;
+    text-security: disc;
   }
   #pin-error {
     color: var(--danger);
@@ -264,19 +266,18 @@
 <body>
 
 <div id="lock-screen">
-  <h1>Locked notebook</h1>
-  <p class="sub">Enter the PIN to open it.</p>
+  <h1>Marginalia</h1>
   <div id="pin-boxes">
-    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="0">
-    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="1">
-    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="2">
-    <input type="password" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="3">
+    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="0">
+    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="1">
+    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="2">
+    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="3">
   </div>
   <div id="pin-error"></div>
 </div>
 
 <div id="app-content">
-<h1>Shared notes</h1>
+<h1>Marginalia</h1>
 <p class="sub">A page for the two of you. Write something, or reply to what's already here.</p>
 
 <div id="compose">
