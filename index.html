@@ -57,26 +57,31 @@
   #compose {
     display: flex;
     flex-direction: column;
-    gap: 8px;
+    gap: 10px;
     margin-bottom: 28px;
     padding-bottom: 24px;
     border-bottom: 1px solid var(--line);
   }
 
-  #compose-row {
+  #compose-actions {
     display: flex;
+    align-items: center;
     gap: 8px;
   }
 
+  #compose-actions #send-btn {
+    margin-left: auto;
+  }
+
   textarea {
-    flex: 1;
+    width: 100%;
     padding: 10px 12px;
     border: 1px solid var(--line);
     border-radius: 6px;
     resize: none;
     background: var(--paper-raised);
     color: var(--ink);
-    min-height: 42px;
+    min-height: 56px;
     line-height: 1.5;
   }
   textarea:focus, .pin-box:focus {
@@ -96,13 +101,21 @@
   button:hover { background: var(--pine-dark); }
   button:disabled { background: var(--line); border-color: var(--line); color: var(--ink-faint); cursor: default; }
 
-  .attach-btn {
+  .icon-btn {
     background: var(--paper-raised);
     border: 1px solid var(--line);
     color: var(--ink-soft);
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
     flex-shrink: 0;
   }
-  .attach-btn:hover { background: var(--card); }
+  .icon-btn:hover { background: var(--card); }
+  .icon-btn svg { width: 18px; height: 18px; }
 
   #image-preview-row {
     display: none;
@@ -233,18 +246,39 @@
     gap: 18px;
     margin-bottom: 18px;
   }
-  .pin-box {
+  .pin-cell {
+    position: relative;
     width: 34px;
     height: 44px;
+  }
+  .pin-box {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
     text-align: center;
     font-size: 22px;
     font-family: 'Fraunces', serif;
     border: none;
     border-bottom: 2px solid var(--ink-faint);
     background: transparent;
+    color: transparent;
+    -webkit-text-fill-color: transparent;
+    caret-color: transparent;
+  }
+  .pin-dot {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    font-family: 'Fraunces', serif;
     color: var(--ink);
-    -webkit-text-security: disc;
-    text-security: disc;
+    pointer-events: none;
   }
   #pin-error {
     color: var(--danger);
@@ -268,10 +302,10 @@
 <div id="lock-screen">
   <h1>Marginalia</h1>
   <div id="pin-boxes">
-    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="0">
-    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="1">
-    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="2">
-    <input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="3">
+    <div class="pin-cell"><input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="0"><span class="pin-dot"></span></div>
+    <div class="pin-cell"><input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="1"><span class="pin-dot"></span></div>
+    <div class="pin-cell"><input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="2"><span class="pin-dot"></span></div>
+    <div class="pin-cell"><input type="tel" inputmode="numeric" pattern="[0-9]*" maxlength="1" class="pin-box" data-idx="3"><span class="pin-dot"></span></div>
   </div>
   <div id="pin-error"></div>
 </div>
@@ -281,11 +315,15 @@
 <p class="sub">A page for the two of you. Write something, or reply to what's already here.</p>
 
 <div id="compose">
-  <div id="compose-row">
-    <textarea id="msg-input" placeholder="Write a message..." maxlength="1000"></textarea>
-    <button id="image-btn" class="attach-btn" title="Choose from gallery" aria-label="Choose image">Image</button>
+  <textarea id="msg-input" placeholder="Write a message..." maxlength="1000"></textarea>
+  <div id="compose-actions">
+    <button id="image-btn" class="icon-btn" title="Choose from gallery" aria-label="Choose image">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"></rect><circle cx="8.5" cy="9.5" r="1.5"></circle><path d="M21 15l-5-5-4 4-2-2-5 5"></path></svg>
+    </button>
     <input type="file" id="image-input" accept="image/*" style="display:none;">
-    <button id="camera-btn" class="attach-btn" title="Take a photo" aria-label="Take photo">Camera</button>
+    <button id="camera-btn" class="icon-btn" title="Take a photo" aria-label="Take photo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+    </button>
     <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
     <button id="send-btn">Send</button>
   </div>
@@ -332,14 +370,16 @@ function tryPinLogin() {
     .then(() => auth.signInWithEmailAndPassword(LOCK_EMAIL, 'pin' + pin))
     .catch(() => {
       pinError.textContent = 'Wrong PIN. Try again.';
-      pinBoxes.forEach(b => { b.value = ''; b.disabled = false; });
+      pinBoxes.forEach(b => { b.value = ''; b.disabled = false; b.nextElementSibling.textContent = ''; });
       pinBoxes[0].focus();
     });
 }
 
 pinBoxes.forEach((box, i) => {
+  const dot = box.nextElementSibling;
   box.addEventListener('input', () => {
     box.value = box.value.replace(/[^0-9]/g, '').slice(0, 1);
+    dot.textContent = box.value ? '•' : '';
     if (box.value && i < pinBoxes.length - 1) {
       pinBoxes[i + 1].focus();
     }
