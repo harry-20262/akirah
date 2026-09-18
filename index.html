@@ -244,6 +244,41 @@
   }
   #remove-image-btn:hover { color: var(--ink-soft); background: none; }
 
+  #view-once-toggle {
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    color: var(--ink-soft);
+    font-size: 12px;
+    padding: 6px 10px;
+    border-radius: 14px;
+  }
+  #view-once-toggle:hover { background: var(--card); }
+  #view-once-toggle.active {
+    background: var(--gold);
+    border-color: var(--gold);
+    color: var(--paper-raised);
+  }
+
+  .view-once-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 1px dashed var(--gold);
+    border-radius: 8px;
+    margin-bottom: 8px;
+    color: var(--gold);
+    font-size: 13px;
+    cursor: pointer;
+    background: var(--paper-raised);
+  }
+  .view-once-card.opened {
+    color: var(--ink-faint);
+    border-color: var(--line);
+    cursor: default;
+  }
+  .view-once-card svg { width: 16px; height: 16px; flex-shrink: 0; }
+
   .msg-image {
     max-width: 100%;
     border-radius: 6px;
@@ -584,6 +619,7 @@
   </div>
   <div id="image-preview-row">
     <img id="image-preview" alt="Selected image preview">
+    <button id="view-once-toggle" title="Disappears after one view">👁 View once</button>
     <button id="remove-image-btn">Remove</button>
   </div>
 </div>
@@ -820,10 +856,17 @@ const cameraInput = document.getElementById('camera-input');
 const imagePreviewRow = document.getElementById('image-preview-row');
 const imagePreview = document.getElementById('image-preview');
 const removeImageBtn = document.getElementById('remove-image-btn');
+const viewOnceToggle = document.getElementById('view-once-toggle');
 const searchInput = document.getElementById('search-input');
 const searchCount = document.getElementById('search-count');
 
 let pendingImage = null;
+let pendingViewOnce = false;
+
+viewOnceToggle.addEventListener('click', () => {
+  pendingViewOnce = !pendingViewOnce;
+  viewOnceToggle.classList.toggle('active', pendingViewOnce);
+});
 
 function compressImage(file) {
   return new Promise((resolve, reject) => {
@@ -879,6 +922,8 @@ cameraInput.addEventListener('change', async () => {
 
 removeImageBtn.addEventListener('click', () => {
   pendingImage = null;
+  pendingViewOnce = false;
+  viewOnceToggle.classList.remove('active');
   imagePreviewRow.style.display = 'none';
   imagePreview.src = '';
 });
@@ -1006,7 +1051,27 @@ function render(list) {
     }
     div.appendChild(meta);
 
-    if (m.image) {
+    if (m.image && m.viewOnce) {
+      const card = document.createElement('div');
+      const isMine = m.sender === currentUserName;
+      if (isMine) {
+        card.className = 'view-once-card opened';
+        card.innerHTML = EYE_SVG + '<span>' + (m.viewed ? 'Opened' : 'Sent · disappears after one view') + '</span>';
+      } else if (m.viewed) {
+        card.className = 'view-once-card opened';
+        card.innerHTML = EYE_SVG + '<span>Already opened</span>';
+      } else {
+        card.className = 'view-once-card';
+        card.innerHTML = EYE_SVG + '<span>Tap to view · disappears after opening</span>';
+        card.addEventListener('click', () => openViewOnce(m));
+      }
+      div.appendChild(card);
+    } else if (m.viewOnce && !m.image) {
+      const card = document.createElement('div');
+      card.className = 'view-once-card opened';
+      card.innerHTML = EYE_SVG + '<span>Photo removed after viewing</span>';
+      div.appendChild(card);
+    } else if (m.image) {
       const img = document.createElement('img');
       img.className = 'msg-image';
       img.src = m.image;
@@ -1144,6 +1209,16 @@ function openLightbox(src) {
   lightboxImg.src = src;
   lightbox.classList.add('open');
 }
+
+const EYE_SVG = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"></path><circle cx="12" cy="12" r="3"></circle></svg>';
+
+function openViewOnce(m) {
+  openLightbox(m.image);
+  currentMessagesRef.child(m.id).update({ viewed: true, viewedBy: currentUserName || null, viewedTs: Date.now() });
+  setTimeout(() => {
+    currentMessagesRef.child(m.id).child('image').remove();
+  }, 4000);
+}
 function closeLightbox() {
   lightbox.classList.remove('open');
   lightboxImg.src = '';
@@ -1179,14 +1254,21 @@ async function sendMessage() {
   sendBtn.disabled = true;
   try {
     const newMsgRef = currentMessagesRef.push();
-    await newMsgRef.set({
+    const payload = {
       text,
       image: pendingImage || null,
       ts: Date.now(),
       sender: currentUserName || null
-    });
+    };
+    if (pendingImage && pendingViewOnce) {
+      payload.viewOnce = true;
+      payload.viewed = false;
+    }
+    await newMsgRef.set(payload);
     msgInput.value = '';
     pendingImage = null;
+    pendingViewOnce = false;
+    viewOnceToggle.classList.remove('active');
     imagePreviewRow.style.display = 'none';
     imagePreview.src = '';
     markSeenNow();
