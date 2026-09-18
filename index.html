@@ -96,13 +96,13 @@
   button:hover { background: var(--pine-dark); }
   button:disabled { background: var(--line); border-color: var(--line); color: var(--ink-faint); cursor: default; }
 
-  #image-btn {
+  .attach-btn {
     background: var(--paper-raised);
     border: 1px solid var(--line);
     color: var(--ink-soft);
     flex-shrink: 0;
   }
-  #image-btn:hover { background: var(--card); }
+  .attach-btn:hover { background: var(--card); }
 
   #image-preview-row {
     display: none;
@@ -282,8 +282,10 @@
 <div id="compose">
   <div id="compose-row">
     <textarea id="msg-input" placeholder="Write a message..." maxlength="1000"></textarea>
-    <button id="image-btn" title="Attach image" aria-label="Attach image">Image</button>
+    <button id="image-btn" class="attach-btn" title="Choose from gallery" aria-label="Choose image">Image</button>
     <input type="file" id="image-input" accept="image/*" style="display:none;">
+    <button id="camera-btn" class="attach-btn" title="Take a photo" aria-label="Take photo">Camera</button>
+    <input type="file" id="camera-input" accept="image/*" capture="environment" style="display:none;">
     <button id="send-btn">Send</button>
   </div>
   <div id="image-preview-row">
@@ -372,6 +374,8 @@ const emptyEl = document.getElementById('empty');
 const statusEl = document.getElementById('status');
 const imageBtn = document.getElementById('image-btn');
 const imageInput = document.getElementById('image-input');
+const cameraBtn = document.getElementById('camera-btn');
+const cameraInput = document.getElementById('camera-input');
 const imagePreviewRow = document.getElementById('image-preview-row');
 const imagePreview = document.getElementById('image-preview');
 const removeImageBtn = document.getElementById('remove-image-btn');
@@ -405,10 +409,7 @@ function compressImage(file) {
   });
 }
 
-imageBtn.addEventListener('click', () => imageInput.click());
-
-imageInput.addEventListener('change', async () => {
-  const file = imageInput.files[0];
+async function handleFileSelected(file) {
   if (!file) return;
   try {
     pendingImage = await compressImage(file);
@@ -417,7 +418,23 @@ imageInput.addEventListener('change', async () => {
   } catch (e) {
     statusEl.textContent = 'Could not load that image.';
   }
+}
+
+// Gallery picker
+imageBtn.addEventListener('click', () => imageInput.click());
+imageInput.addEventListener('change', async () => {
+  const file = imageInput.files[0];
+  await handleFileSelected(file);
   imageInput.value = '';
+});
+
+// Camera capture — capture="environment" opens the device camera directly on mobile;
+// on desktop browsers without a camera-aware picker, it falls back to a normal file dialog.
+cameraBtn.addEventListener('click', () => cameraInput.click());
+cameraInput.addEventListener('change', async () => {
+  const file = cameraInput.files[0];
+  await handleFileSelected(file);
+  cameraInput.value = '';
 });
 
 removeImageBtn.addEventListener('click', () => {
