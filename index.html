@@ -287,6 +287,27 @@
     cursor: pointer;
   }
 
+  #instant-btn {
+    display: none;
+    position: fixed;
+    right: 22px;
+    bottom: 28px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--gold), var(--pine));
+    border: none;
+    color: var(--paper-raised);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.3);
+    z-index: 500;
+    cursor: pointer;
+  }
+  #instant-btn:hover { filter: brightness(1.08); background: linear-gradient(135deg, var(--gold), var(--pine)); }
+  #instant-btn svg { width: 24px; height: 24px; }
+
   #lightbox {
     display: none;
     position: fixed;
@@ -629,6 +650,11 @@
 <div id="status">Connecting...</div>
 </div>
 
+<button id="instant-btn" title="Instant photo (view once)" aria-label="Send instant photo">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1V9a1 1 0 0 1 1-1z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
+</button>
+<input type="file" id="instant-camera-input" accept="image/*" capture="environment" style="display:none;">
+
 <div id="lightbox">
   <button id="lightbox-close" aria-label="Close">&times;</button>
   <img id="lightbox-img" alt="Full size image">
@@ -693,6 +719,7 @@ function panicLock() {
   // Wipe the screen instantly, before signOut even resolves
   localStorage.setItem(LOCKOUT_KEY, Date.now() + LOCKOUT_MS);
   appContent.style.display = 'none';
+  instantBtn.style.display = 'none';
   nameScreen.style.display = 'none';
   nameCancelBtn.style.display = 'none';
   isRenaming = false;
@@ -729,6 +756,7 @@ function saveName() {
   if (isRenaming) {
     isRenaming = false;
     appContent.style.display = 'block';
+    instantBtn.style.display = 'flex';
     markSeenNow();
     render(latestList);
   } else {
@@ -741,6 +769,7 @@ changeNameBtn.addEventListener('click', () => {
   nameInput.value = currentUserName || '';
   nameCancelBtn.style.display = 'block';
   appContent.style.display = 'none';
+  instantBtn.style.display = 'none';
   nameScreen.style.display = 'block';
   nameInput.focus();
   nameInput.select();
@@ -751,6 +780,7 @@ nameCancelBtn.addEventListener('click', () => {
   nameScreen.style.display = 'none';
   nameCancelBtn.style.display = 'none';
   appContent.style.display = 'block';
+  instantBtn.style.display = 'flex';
 });
 
 /* ---------- Lock screen / PIN ---------- */
@@ -820,6 +850,7 @@ auth.onAuthStateChanged((user) => {
   } else {
     lockScreen.style.display = 'block';
     appContent.style.display = 'none';
+    instantBtn.style.display = 'none';
     nameScreen.style.display = 'none';
     nameCancelBtn.style.display = 'none';
     isRenaming = false;
@@ -834,6 +865,7 @@ auth.onAuthStateChanged((user) => {
 let listenersAttached = false;
 function showApp() {
   appContent.style.display = 'block';
+  instantBtn.style.display = 'flex';
   if (!listenersAttached) {
     attachMessagesListener();
     attachPresenceListener();
@@ -859,6 +891,8 @@ const removeImageBtn = document.getElementById('remove-image-btn');
 const viewOnceToggle = document.getElementById('view-once-toggle');
 const searchInput = document.getElementById('search-input');
 const searchCount = document.getElementById('search-count');
+const instantBtn = document.getElementById('instant-btn');
+const instantCameraInput = document.getElementById('instant-camera-input');
 
 let pendingImage = null;
 let pendingViewOnce = false;
@@ -905,6 +939,30 @@ async function handleFileSelected(file) {
     statusEl.textContent = 'Could not load that image.';
   }
 }
+
+instantBtn.addEventListener('click', () => instantCameraInput.click());
+instantCameraInput.addEventListener('change', async () => {
+  const file = instantCameraInput.files[0];
+  instantCameraInput.value = '';
+  if (!file) return;
+  instantBtn.disabled = true;
+  try {
+    const dataUrl = await compressImage(file);
+    await currentMessagesRef.push().set({
+      text: '',
+      image: dataUrl,
+      ts: Date.now(),
+      sender: currentUserName || null,
+      viewOnce: true,
+      viewed: false
+    });
+    markSeenNow();
+  } catch (e) {
+    statusEl.textContent = 'Could not send instant photo. Try again.';
+  } finally {
+    instantBtn.disabled = false;
+  }
+});
 
 imageBtn.addEventListener('click', () => imageInput.click());
 imageInput.addEventListener('change', async () => {
